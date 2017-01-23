@@ -1,0 +1,44 @@
+<html>
+
+<head>
+    <title>Cumulative Flow Diagram</title>
+</head>
+
+<body>
+    <div class="container-fluid">
+        <div id="error-div" class="row">
+            <div class="col-md-12">
+                <h1>An error occured</h1>
+                <p id="errormessage"></p>
+            </div>
+        </div>
+        <div id="help-div" class="row">
+            <div class="col-md-12">
+                <h1>Help</h1>
+                <p>
+                    Please log on to your Jira
+                    <h3>Example</h2>
+                        <p>
+                            http://localhost:8080/?startDate=02-02-2017&amp;endDate=28-02-2017
+                        </p>
+                        <h3>Query Parameters</h2>
+                            <p>
+                                <h4><code>startDate</code></h4>
+                                The start date of the diagram
+                            </p>
+                            <p>
+                                <h4><code>endDate</code></h4>
+                                The end date of the diagram
+                            </p>
+            </div>
+        </div>
+        <div id="chart-div" class="row">
+            <div class="col-md-12">
+                <canvas id="chart"></canvas>
+            </div>
+        </div>
+    </div>
+    <script src="bundle.js"></script>
+</body>
+
+</html>
