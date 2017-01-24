@@ -5,6 +5,7 @@ import moment from 'moment';
 import _ from 'lodash';
 
 import './chart-js-draw-line-plugin.js';
+import './chart-js-draw-box-plugin.js';
 
 let dateToString = function (date) {
   return date.format('YYYY-MM-DD');
@@ -156,7 +157,7 @@ let displayError = function (errorMessage) {
 };
 
 let startDate = "2017-01-01";
-let endDate = "2017-01-22";
+let endDate = "2017-01-28";
 let dateIgnoreList = ["2017-01-23"];
 
 let states = ['Done', 'In Progress', 'Open'];
@@ -167,7 +168,7 @@ let jiraQueryTemplate = "status was '$state' during ($date, $date)";
 
 let days = getDays(startDate, endDate, dateIgnoreList);
 let lastDay = getLastDayWithData(days);
-
+let lastDayIndex = _.indexOf(days, lastDay);
 
 retrieveStateDataSets(jiraQueryTemplate, states, colors, days, lastDay).then(function (datasets) {
   let targetIssueCount = getTargetIssueCount(datasets, days);
@@ -198,7 +199,11 @@ retrieveStateDataSets(jiraQueryTemplate, states, colors, days, lastDay).then(fun
         begin: { x: xAxisLabels[0], y: 0 },
         end: { x: xAxisLabels[xAxisLabels.length - 1], y: targetIssueCount },
         style: "rgba(0, 0, 0, 1)"
+      },
+      drawBox: {
+        begin: { x: xAxisLabels[lastDayIndex], y: 0 },
+        end: { x: xAxisLabels[lastDayIndex + 2], y: targetIssueCount },
+        style: "rgba(0, 0, 0, 1)"
       }
-    }
-  });
+  }});
 });
