@@ -11,7 +11,7 @@
     "default_title": "Jira Cumulative Flow Diagram"
   },
   "permissions": [
-    "https://jira-cfd.atlassian.net/*"
+    "https://*/*"
   ],
   "icons": {}
 }
