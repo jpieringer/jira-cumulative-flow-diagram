@@ -9,7 +9,7 @@ import './chart-js-draw-box-plugin.js';
 
 let dateToString = function (date) {
   return date.format('YYYY-MM-DD');
-}
+};
 
 let getDays = function (startDate, endDate, dateIgnoreList) {
   let days = [];
@@ -27,18 +27,29 @@ let getDays = function (startDate, endDate, dateIgnoreList) {
 
 let formatDays = function (days) {
   return _.map(days, day => moment(day).format('dd D.M'));
-}
+};
 
-let fillJirayQueryTemplate = function (jiraQueryTemplate, date, state) {
-  let query = jiraQueryTemplate;
-  query = _.replace(query, '$date', date);
-  query = _.replace(query, '$date', date);
-  query = _.replace(query, '$state', state);
-  query = _.replace(query, '$state', state);
-  return query;
-}
+let createJiraQuery = function (projectQuery, date, targetState, states) {
 
-let executeSingleJiraQuery = function (jiraQueryTemplate, date, state) {
+  let reversedStates = _.reverse(states.slice());
+  let targetStateIndex = _.indexOf(reversedStates, targetState);
+  let includedStates = _.slice(reversedStates, targetStateIndex);
+
+  let stateQuery = "status was in ('" + _.join(includedStates, "', '") + "') during (" + date + ", " + date + ")";
+
+  projectQuery = _.trim(projectQuery);
+
+  if (projectQuery.length === 0) {
+    return stateQuery;
+  }
+
+  return projectQuery + " and " + stateQuery;
+};
+
+let executeSingleJiraQuery = function (jiraQueryTemplate, date, state, states) {
+
+  let jiraQuery = createJiraQuery(jiraQueryTemplate, date, state, states);
+
   let promise = new Promise(function (resolve, reject) {
     $.ajax({
       "url": baseJiraUrl + "rest/api/2/search",
@@ -47,9 +58,10 @@ let executeSingleJiraQuery = function (jiraQueryTemplate, date, state) {
         "Content-Type": "application/json",
       },
       "data": {
-        jql: fillJirayQueryTemplate(jiraQueryTemplate, date, state)
+        jql: jiraQuery
       }
     }).then(function success(data, message, xhr) {
+      console.log("Received query for " + state + " on " + date + " with " + data.total + " (" + jiraQuery + ")");
       resolve({ date: date, state: state, count: data.total });
     }, function error() {
       displayError("Could not access Jira. Are you logged on?");
@@ -60,7 +72,7 @@ let executeSingleJiraQuery = function (jiraQueryTemplate, date, state) {
   return promise;
 };
 
-let retrieveStateDataSets = function (jiraQueryTemplate, states, colors, days, lastDay) {
+let retrieveStateDataSets = function (jiraQuery, states, colors, days, lastDay) {
   let promise = new Promise(function (resolve, reject) {
 
     let queryPromisses = [];
@@ -69,7 +81,7 @@ let retrieveStateDataSets = function (jiraQueryTemplate, states, colors, days, l
 
       for (let stateIndex = 0; stateIndex < states.length; ++stateIndex) {
         let state = states[stateIndex];
-        queryPromisses.push(executeSingleJiraQuery(jiraQueryTemplate, day, state));
+        queryPromisses.push(executeSingleJiraQuery(jiraQuery, day, state, states));
       }
     }
 
@@ -123,7 +135,7 @@ let getLastDayWithData = function (days) {
   }
 
   return days[targetDayIndex];
-}
+};
 
 let getTargetIssueCount = function (datasets, days) {
   let targetIssueCount = 0;
@@ -132,11 +144,11 @@ let getTargetIssueCount = function (datasets, days) {
   let targetDayIndex = _.indexOf(days, targetDay);
 
   for (let datasetIndex = 0; datasetIndex < datasets.length; ++datasetIndex) {
-    targetIssueCount += datasets[datasetIndex].data[targetDayIndex];
+    targetIssueCount = _.max([targetIssueCount, datasets[datasetIndex].data[targetDayIndex]]);
   }
 
   return targetIssueCount;
-}
+};
 
 
 if (1) {
@@ -156,21 +168,21 @@ let displayError = function (errorMessage) {
   $("#errormessage").text(errorMessage);
 };
 
-let startDate = "2017-01-01";
+let startDate = "2017-01-02";
 let endDate = "2017-01-28";
 let dateIgnoreList = ["2017-01-23"];
 
-let states = ['Done', 'In Progress', 'Open'];
+let states = ['Done', 'In Progress', 'To Do'];
 let colors = ['rgba(153,255,51,1)', 'rgba(255,153,0,1)', 'rgba(0,153,0,1)'];
 
 let baseJiraUrl = "https://jira-cfd.atlassian.net/";
-let jiraQueryTemplate = "status was '$state' during ($date, $date)";
+let jiraQuery = "project = CFDTES";
 
 let days = getDays(startDate, endDate, dateIgnoreList);
 let lastDay = getLastDayWithData(days);
 let lastDayIndex = _.indexOf(days, lastDay);
 
-retrieveStateDataSets(jiraQueryTemplate, states, colors, days, lastDay).then(function (datasets) {
+retrieveStateDataSets(jiraQuery, states, colors, days, lastDay).then(function (datasets) {
   let targetIssueCount = getTargetIssueCount(datasets, days);
   let xAxisLabels = formatDays(days);
 
@@ -184,8 +196,11 @@ retrieveStateDataSets(jiraQueryTemplate, states, colors, days, lastDay).then(fun
     options: {
       scales: {
         yAxes: [{
-          stacked: true
-        }]
+          stacked: false,
+          ticks: {
+            min: 0
+          }
+        }],
       },
       legend: {
         reverse: true
@@ -205,5 +220,6 @@ retrieveStateDataSets(jiraQueryTemplate, states, colors, days, lastDay).then(fun
         end: { x: xAxisLabels[lastDayIndex + 2], y: targetIssueCount },
         style: "rgba(0, 0, 0, 1)"
       }
-  }});
+    }
+  });
 });
