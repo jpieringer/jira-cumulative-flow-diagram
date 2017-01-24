@@ -7,6 +7,25 @@ import _ from 'lodash';
 import './chart-js-draw-line-plugin.js';
 import './chart-js-draw-box-plugin.js';
 
+let displayChart = function () {
+  $("#loading-div").hide();
+  $("#error-div").hide();
+  $("#chart-div").show();
+};
+
+let displayLoading = function (progress) {
+  $("#loading-div").show();
+  $("#error-div").hide();
+  $("#chart-div").hide();
+};
+
+let displayError = function (errorMessage) {
+  $("#loading-div").hide();
+  $("#chart-div").hide();
+  $("#error-div").show();
+  $("#errormessage").text(errorMessage);
+};
+
 let dateToString = function (date) {
   return date.format('YYYY-MM-DD');
 };
@@ -30,7 +49,6 @@ let formatDays = function (days) {
 };
 
 let createJiraQuery = function (projectQuery, date, targetState, states) {
-
   let reversedStates = _.reverse(states.slice());
   let targetStateIndex = _.indexOf(reversedStates, targetState);
   let includedStates = _.slice(reversedStates, targetStateIndex);
@@ -47,7 +65,6 @@ let createJiraQuery = function (projectQuery, date, targetState, states) {
 };
 
 let executeSingleJiraQuery = function (jiraQueryTemplate, date, state, states) {
-
   let jiraQuery = createJiraQuery(jiraQueryTemplate, date, state, states);
 
   let promise = new Promise(function (resolve, reject) {
@@ -150,23 +167,7 @@ let getTargetIssueCount = function (datasets, days) {
   return targetIssueCount;
 };
 
-
-if (1) {
-  $("#help-div").hide();
-  $("#chart-div").show();
-  $("#error-div").hide();
-} else {
-  $("#help-div").show();
-  $("#chart-div").hide();
-  $("#error-div").hide();
-}
-
-let displayError = function (errorMessage) {
-  $("#help-div").hide();
-  $("#chart-div").hide();
-  $("#error-div").show();
-  $("#errormessage").text(errorMessage);
-};
+displayLoading(0);
 
 let startDate = "2017-01-02";
 let endDate = "2017-01-28";
@@ -222,4 +223,6 @@ retrieveStateDataSets(jiraQuery, states, colors, days, lastDay).then(function (d
       }
     }
   });
+
+  displayChart();
 });
