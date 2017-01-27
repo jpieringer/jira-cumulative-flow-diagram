@@ -48,12 +48,12 @@ let dateToString = function (date) {
   return date.format('YYYY-MM-DD');
 };
 
-let getDays = function (startDate, endDate, dateIgnoreList) {
+let getDays = function (startDate, endDate, nonWorkingDays) {
   let days = [];
 
   let currentDate = moment(startDate);
   while (currentDate.isSameOrBefore(endDate)) {
-    if (currentDate.day() >= 1 && currentDate.day() <= 5 && !_.every(dateIgnoreList, ignoreDate => moment(ignoreDate).isSame(currentDate))) {
+    if (currentDate.day() >= 1 && currentDate.day() <= 5 && !_.every(nonWorkingDays, ignoreDate => moment(ignoreDate).isSame(currentDate))) {
       days.push(dateToString(currentDate));
     }
     currentDate.add(1, 'days');
@@ -205,6 +205,11 @@ let hasQueryParameters = function() {
   return _.trim(location.search.slice(1));
 };
 
+let changeSettings = function() {
+  $('#settingsTextArea').val(JSON.stringify(qs.parse(location.search.slice(1)), null, 2));
+  displayQueryBuilder();
+}
+
 let buildChart = function() {
   let settings = parseQueryParameters();
   console.log(settings);
@@ -212,7 +217,7 @@ let buildChart = function() {
   let states = _.map(settings.states, x => x.state);
   let colors = _.map(settings.states, x => x.color);
 
-  let days = getDays(settings.startDate, settings.endDate, settings.dateIgnoreList);
+  let days = getDays(settings.startDate, settings.endDate, settings.nonWorkingDays);
   let lastDay = getLastDayWithData(days);
   let lastDayIndex = _.indexOf(days, lastDay);
 
@@ -272,7 +277,7 @@ if (hasQueryParameters()) {
       jiraQuery: "project = CFDTES",
       startDate: '2017-01-02', 
       endDate: '2017-01-28', 
-      dateIgnoreList: ['2017-01-23'],
+      nonWorkingDays: ['2017-01-23'],
       states: [
         {state: 'Done', color: 'rgba(153,255,51,1)'},
         {state: 'In Progress', color: 'rgba(255,153,0,1)'},
@@ -283,3 +288,5 @@ if (hasQueryParameters()) {
 }
 
 $("#createLink").click(createLink);
+$("#changeSettings").click(changeSettings);
+$("#changeSettingsAfterError").click(changeSettings);

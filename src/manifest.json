@@ -1,6 +1,7 @@
 {
   "name": "Jira Cumulative Flow Diagram",
-  "version": "0.1",
+  "description": "A extension that can be used to create Cumulative Flow Diagrams based on Jira Queries. Weekends and other non working days can be excluded. Fork me on GitHub: https://github.com/jpieringer/jira-cumulative-flow-diagram",
+  "version": "2.0",
   "manifest_version": 2,
   "background": {
     "scripts": [
