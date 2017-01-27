@@ -5,26 +5,56 @@
 </head>
 
 <body>
-    <div class="container-fluid">
-        <div id="error-div" class="row">
+    <div id="error-div" class="container-fluid" style="display: none;">
+        <div class="row">
             <div class="col-md-12">
                 <h1>An error occured</h1>
                 <p id="errormessage"></p>
             </div>
         </div>
+    </div>
 
-        <div id="loading-div" class="row">
-            <div class="col-md-4"></div>
-            <div class="col-md-4">
+    <div id="query-builder-div" class="container-fluid" style="display: none;">
+        <div class="row">
+            <div class="col-md-offset-3 col-md-6">
+                <h1>Create a Cumulative Flow Diagram</h1>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-offset-3 col-md-6">
+                <form>
+                    <textarea id="settingsTextArea" class="form-control" rows="25"></textarea>
+                </form>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-offset-3 col-md-6">
+                <form>
+                    <button type="button" class="btn btn-default" id="createLink">Create chart</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="loading-div" class="container-fluid" style="display: none;">
+        <div class="row">
+            <div class="col-md-offset-3 col-md-6">
+                <h1>Creating the Cumulative Flow Diagram...</h1>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-offset-3 col-md-6">
                 <div class="progress">
-                    <div id="progressbar" class="progress-bar progress-bar-striped active" role="progressbar" aria-valuenow="45" aria-valuemin="0" aria-valuemax="100" style="width: 100%; height: 50px;"> 
+                    <div id="progressbar" class="progress-bar progress-bar-striped active" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width:0%"> 
                         <span></span>
                     </div>
                 </div>
             </div>
         </div>
+    </div>
 
-        <div id="chart-div" class="row">
+    <div id="chart-div" class="container-fluid" style="display: none;">
+        <div class="row">
             <div class="col-md-12">
                 <canvas id="chart"></canvas>
             </div>

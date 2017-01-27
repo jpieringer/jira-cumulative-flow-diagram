@@ -3,23 +3,41 @@ import Chart from 'chart.js';
 import 'bootstrap/dist/css/bootstrap.css';
 import moment from 'moment';
 import _ from 'lodash';
+import qs from 'qs';
 
 import './chart-js-draw-line-plugin.js';
 import './chart-js-draw-box-plugin.js';
 
 let displayChart = function () {
+  $("#query-builder-div").hide();
   $("#loading-div").hide();
   $("#error-div").hide();
   $("#chart-div").show();
 };
 
-let displayLoading = function (progress) {
+let displayLoading = function () {
+  $("#query-builder-div").hide();
   $("#loading-div").show();
   $("#error-div").hide();
   $("#chart-div").hide();
+
+  $('#progressbar').attr('aria-valuenow', 0).css('width', 0);
 };
 
+let trackProgress = function(increment) {
+  let progress = parseFloat($('#progressbar').attr('aria-valuenow')) + increment;
+  $('#progressbar').attr('aria-valuenow', progress).css('width', progress + "%");
+};
+
+let displayQueryBuilder = function () {
+  $("#query-builder-div").show();
+  $("#loading-div").hide();
+  $("#error-div").hide();
+  $("#chart-div").hide();
+}
+
 let displayError = function (errorMessage) {
+  $("#query-builder-div").hide();
   $("#loading-div").hide();
   $("#chart-div").hide();
   $("#error-div").show();
@@ -64,12 +82,12 @@ let createJiraQuery = function (projectQuery, date, targetState, states) {
   return projectQuery + " and " + stateQuery;
 };
 
-let executeSingleJiraQuery = function (jiraQueryTemplate, date, state, states) {
+let executeSingleJiraQuery = function (jiraUrl, jiraQueryTemplate, date, state, states, queryCount) {
   let jiraQuery = createJiraQuery(jiraQueryTemplate, date, state, states);
 
   let promise = new Promise(function (resolve, reject) {
     $.ajax({
-      "url": baseJiraUrl + "rest/api/2/search",
+      "url": jiraUrl + "rest/api/2/search",
       "method": "GET",
       "headers": {
         "Content-Type": "application/json",
@@ -79,6 +97,7 @@ let executeSingleJiraQuery = function (jiraQueryTemplate, date, state, states) {
       }
     }).then(function success(data, message, xhr) {
       console.log("Received query for " + state + " on " + date + " with " + data.total + " (" + jiraQuery + ")");
+      trackProgress(100/queryCount);
       resolve({ date: date, state: state, count: data.total });
     }, function error() {
       displayError("Could not access Jira. Are you logged on?");
@@ -89,7 +108,7 @@ let executeSingleJiraQuery = function (jiraQueryTemplate, date, state, states) {
   return promise;
 };
 
-let retrieveStateDataSets = function (jiraQuery, states, colors, days, lastDay) {
+let retrieveStateDataSets = function (jiraUrl, jiraQuery, states, colors, days, lastDay) {
   let promise = new Promise(function (resolve, reject) {
 
     let queryPromisses = [];
@@ -98,7 +117,7 @@ let retrieveStateDataSets = function (jiraQuery, states, colors, days, lastDay) 
 
       for (let stateIndex = 0; stateIndex < states.length; ++stateIndex) {
         let state = states[stateIndex];
-        queryPromisses.push(executeSingleJiraQuery(jiraQuery, day, state, states));
+        queryPromisses.push(executeSingleJiraQuery(jiraUrl, jiraQuery, day, state, states, states.length*days.length));
       }
     }
 
@@ -167,62 +186,100 @@ let getTargetIssueCount = function (datasets, days) {
   return targetIssueCount;
 };
 
-displayLoading(0);
+let createDeepLink = function(settings) {
+  let baseUrl = "chrome-extension://magcjdplddfbdcgkjmmkcjhkppaiijen/index.html";
+  return baseUrl + "?" + qs.stringify(settings);
+};
 
-let startDate = "2017-01-02";
-let endDate = "2017-01-28";
-let dateIgnoreList = ["2017-01-23"];
+let createLink = function() {
+  let deepLink = createDeepLink(JSON.parse($('#settingsTextArea').val()));
+  window.location.replace(deepLink);
+};
 
-let states = ['Done', 'In Progress', 'To Do'];
-let colors = ['rgba(153,255,51,1)', 'rgba(255,153,0,1)', 'rgba(0,153,0,1)'];
+let parseQueryParameters = function() {
+  let queryString = location.search.slice(1);
+  return qs.parse(queryString);
+};
 
-let baseJiraUrl = "https://jira-cfd.atlassian.net/";
-let jiraQuery = "project = CFDTES";
+let hasQueryParameters = function() {
+  return _.trim(location.search.slice(1));
+};
 
-let days = getDays(startDate, endDate, dateIgnoreList);
-let lastDay = getLastDayWithData(days);
-let lastDayIndex = _.indexOf(days, lastDay);
+let buildChart = function() {
+  let settings = parseQueryParameters();
+  console.log(settings);
 
-retrieveStateDataSets(jiraQuery, states, colors, days, lastDay).then(function (datasets) {
-  let targetIssueCount = getTargetIssueCount(datasets, days);
-  let xAxisLabels = formatDays(days);
+  let states = _.map(settings.states, x => x.state);
+  let colors = _.map(settings.states, x => x.color);
 
-  let chartCanvas = document.getElementById('chart').getContext('2d');
-  let chart = new Chart(chartCanvas, {
-    type: 'line',
-    data: {
-      labels: xAxisLabels,
-      datasets: datasets
-    },
-    options: {
-      scales: {
-        yAxes: [{
-          stacked: false,
-          ticks: {
-            min: 0
+  let days = getDays(settings.startDate, settings.endDate, settings.dateIgnoreList);
+  let lastDay = getLastDayWithData(days);
+  let lastDayIndex = _.indexOf(days, lastDay);
+
+  displayLoading(days.length);
+
+  retrieveStateDataSets(settings.jiraUrl, settings.jiraQuery, states, colors, days, lastDay).then(function (datasets) {
+    let targetIssueCount = getTargetIssueCount(datasets, days);
+    let xAxisLabels = formatDays(days);
+
+    let chartCanvas = document.getElementById('chart').getContext('2d');
+    let chart = new Chart(chartCanvas, {
+      type: 'line',
+      data: {
+        labels: xAxisLabels,
+        datasets: datasets
+      },
+      options: {
+        scales: {
+          yAxes: [{
+            stacked: false,
+            ticks: {
+              min: 0
+            }
+          }],
+        },
+        legend: {
+          reverse: true
+        },
+        elements: {
+          line: {
+            tension: 0
           }
-        }],
-      },
-      legend: {
-        reverse: true
-      },
-      elements: {
-        line: {
-          tension: 0
+        },
+        drawLine: {
+          begin: { x: xAxisLabels[0], y: 0 },
+          end: { x: xAxisLabels[xAxisLabels.length - 1], y: targetIssueCount },
+          style: "rgba(0, 0, 0, 1)"
+        },
+        drawBox: {
+          begin: { x: xAxisLabels[lastDayIndex], y: 0 },
+          end: { x: xAxisLabels[lastDayIndex + 2], y: targetIssueCount },
+          style: "rgba(0, 0, 0, 1)"
         }
-      },
-      drawLine: {
-        begin: { x: xAxisLabels[0], y: 0 },
-        end: { x: xAxisLabels[xAxisLabels.length - 1], y: targetIssueCount },
-        style: "rgba(0, 0, 0, 1)"
-      },
-      drawBox: {
-        begin: { x: xAxisLabels[lastDayIndex], y: 0 },
-        end: { x: xAxisLabels[lastDayIndex + 2], y: targetIssueCount },
-        style: "rgba(0, 0, 0, 1)"
       }
-    }
-  });
+    });
 
-  displayChart();
-});
+    displayChart();
+  });
+};
+
+if (hasQueryParameters()) {
+  buildChart();
+} else {
+  $('#settingsTextArea').val(JSON.stringify(
+    {
+      jiraUrl: "https://jira-cfd.atlassian.net/",
+      jiraQuery: "project = CFDTES",
+      startDate: '2017-01-02', 
+      endDate: '2017-01-28', 
+      dateIgnoreList: ['2017-01-23'],
+      states: [
+        {state: 'Done', color: 'rgba(153,255,51,1)'},
+        {state: 'In Progress', color: 'rgba(255,153,0,1)'},
+        {state: 'To Do', color: 'rgba(0,153,0,1)'}
+  ]}, null, 2));
+
+  displayQueryBuilder();
+}
+
+$("#createLink").click(createLink);
