@@ -53,7 +53,7 @@ let getDays = function (startDate, endDate, nonWorkingDays) {
 
   let currentDate = moment(startDate);
   while (currentDate.isSameOrBefore(endDate)) {
-    if (currentDate.day() >= 1 && currentDate.day() <= 5 && !_.every(nonWorkingDays, ignoreDate => moment(ignoreDate).isSame(currentDate))) {
+    if (currentDate.day() >= 1 && currentDate.day() <= 5 && (nonWorkingDays.length === 0 || !_.every(nonWorkingDays, ignoreDate => moment(ignoreDate).isSame(currentDate)))) {
       days.push(dateToString(currentDate));
     }
     currentDate.add(1, 'days');
@@ -217,7 +217,7 @@ let buildChart = function() {
   let states = _.map(settings.states, x => x.state);
   let colors = _.map(settings.states, x => x.color);
 
-  let days = getDays(settings.startDate, settings.endDate, settings.nonWorkingDays);
+  let days = getDays(settings.startDate, settings.endDate, settings.nonWorkingDays || []);
   let lastDay = getLastDayWithData(days);
   let lastDayIndex = _.indexOf(days, lastDay);
 
