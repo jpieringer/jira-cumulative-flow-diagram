@@ -34,7 +34,7 @@ Download the extension via the [Chrome Webstore](https://chrome.google.com/webst
 4. Click on the "Create Chart" button to finally create the chart.
 5. The created link can be shared. Everyone with the extension installed and logged into Jira should be able to open the diagram.
 6. The created diagram might look like the following:
-![icon](docs/example-diagram.png)
+![icon](docs/cfd-example.png)
 
 ## Options
 | Option | Description |
