@@ -165,6 +165,26 @@ let getFilterFromJira = function (jiraUrl, jiraFilter) {
   return promise;
 };
 
+let getSprintFromJira = function (jiraUrl, jiraSprint) {
+  let promise = new Promise(function (resolve, reject) {
+    $.ajax({
+      "url": jiraUrl + "/rest/agile/1.0/sprint/" + jiraSprint,
+      "method": "GET",
+      "headers": {
+        "Content-Type": "application/json",
+      }
+    }).then(function success(data, message, xhr) {
+      console.log("Received sprint: " + data);
+      resolve(data);
+    }, function error() {
+      displayError("Could not access Jira. Are you logged on?");
+      reject();
+    });
+  });
+
+  return promise;
+};
+
 /**
  * Today or begin/end if it is smaller/larger
  */
@@ -281,18 +301,49 @@ let getDataAndBuildChart = function (settings) {
   let states = _.map(settings.states, x => x.state);
   let colors = _.map(settings.states, x => x.color);
 
-  let days = getDays(settings.startDate, settings.endDate, settings.nonWorkingDays || []);
-  let lastDay = getLastDayWithData(days);
+  let startDate = settings.startDate;
+  let endDate = settings.endDate;
+  let nonWorkingDays = settings.nonWorkingDays || [];
+  let jql = settings.jiraQuery;
 
-  displayLoading(days.length);
+  let processSprint = function () {
+    return new Promise(function (resolve, reject) {
+      if (typeof settings.jiraSprint !== "undefined") {
+        getSprintFromJira(settings.jiraUrl, settings.jiraSprint).then(function (data) {
+          startDate = startDate || dateToString(moment(data.startDate));
+          endDate = endDate || dateToString(moment(data.endDate));
+          jql = jql || "sprint = " + data.id;
+          resolve();
+        });
+      } else {
+        resolve();
+      }
+    })
+  };
 
-  if (settings.jiraFilter !== undefined) {
-    getFilterFromJira(settings.jiraUrl, settings.jiraFilter).then(function (jql) {
+  let processFilter = function () {
+    return new Promise(function (resolve, reject) {
+      if (typeof settings.jiraFilter !== "undefined") {
+        getFilterFromJira(settings.jiraUrl, settings.jiraFilter).then(function (filterJql) {
+          jql = jql || filterJql;
+          resolve();
+        });
+      } else {
+        resolve();
+      }
+    })
+  };
+
+  processFilter()
+    .then(function () {
+      return processSprint();
+    }).then(function () {
+      let days = getDays(startDate, endDate, nonWorkingDays);
+      let lastDay = getLastDayWithData(days);
+
+      displayLoading(days.length);
       retrieveStateDataSets(settings.jiraUrl, jql, states, colors, days, lastDay).then(buildAndDisplayChart);
     });
-  } else {
-    retrieveStateDataSets(settings.jiraUrl, settings.jiraQuery, states, colors, days, lastDay).then(buildAndDisplayChart);
-  }
 };
 
 if (hasQueryParameters()) {
