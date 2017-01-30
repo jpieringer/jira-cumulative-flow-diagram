@@ -24,7 +24,7 @@ let displayLoading = function () {
   $('#progressbar').attr('aria-valuenow', 0).css('width', 0);
 };
 
-let trackProgress = function(increment) {
+let trackProgress = function (increment) {
   let progress = parseFloat($('#progressbar').attr('aria-valuenow')) + increment;
   $('#progressbar').attr('aria-valuenow', progress).css('width', progress + "%");
 };
@@ -97,7 +97,7 @@ let executeSingleJiraQuery = function (jiraUrl, jiraQueryTemplate, date, state, 
       }
     }).then(function success(data, message, xhr) {
       console.log("Received query for " + state + " on " + date + " with " + data.total + " (" + jiraQuery + ")");
-      trackProgress(100/queryCount);
+      trackProgress(100 / queryCount);
       resolve({ date: date, state: state, count: data.total });
     }, function error() {
       displayError("Could not access Jira. Are you logged on?");
@@ -117,7 +117,7 @@ let retrieveStateDataSets = function (jiraUrl, jiraQuery, states, colors, days, 
 
       for (let stateIndex = 0; stateIndex < states.length; ++stateIndex) {
         let state = states[stateIndex];
-        queryPromisses.push(executeSingleJiraQuery(jiraUrl, jiraQuery, day, state, states, states.length*days.length));
+        queryPromisses.push(executeSingleJiraQuery(jiraUrl, jiraQuery, day, state, states, states.length * days.length));
       }
     }
 
@@ -138,7 +138,27 @@ let retrieveStateDataSets = function (jiraUrl, jiraQuery, states, colors, days, 
         };
       }
 
-      resolve(datasets);
+      resolve({ datasets: datasets, days: days });
+    });
+  });
+
+  return promise;
+};
+
+let getFilterFromJira = function (jiraUrl, jiraFilter) {
+  let promise = new Promise(function (resolve, reject) {
+    $.ajax({
+      "url": jiraUrl + "rest/api/2/filter/" + jiraFilter,
+      "method": "GET",
+      "headers": {
+        "Content-Type": "application/json",
+      }
+    }).then(function success(data, message, xhr) {
+      console.log("Received filter: " + data.jql);
+      resolve(data.jql);
+    }, function error() {
+      displayError("Could not access Jira. Are you logged on?");
+      reject();
     });
   });
 
@@ -186,103 +206,113 @@ let getTargetIssueCount = function (datasets, days) {
   return targetIssueCount;
 };
 
-let createDeepLink = function(settings) {
+let createDeepLink = function (settings) {
   let baseUrl = "chrome-extension://magcjdplddfbdcgkjmmkcjhkppaiijen/index.html";
   return baseUrl + "?" + qs.stringify(settings);
 };
 
-let createLink = function() {
+let createLink = function () {
   let deepLink = createDeepLink(JSON.parse($('#settingsTextArea').val()));
   window.location.replace(deepLink);
 };
 
-let parseQueryParameters = function() {
+let parseQueryParameters = function () {
   let queryString = location.search.slice(1);
   return qs.parse(queryString);
 };
 
-let hasQueryParameters = function() {
+let hasQueryParameters = function () {
   return _.trim(location.search.slice(1));
 };
 
-let changeSettings = function() {
+let changeSettings = function () {
   $('#settingsTextArea').val(JSON.stringify(qs.parse(location.search.slice(1)), null, 2));
   displayQueryBuilder();
-}
+};
 
-let buildChart = function() {
-  let settings = parseQueryParameters();
-  console.log(settings);
+let buildAndDisplayChart = function (data) {
+  let targetIssueCount = getTargetIssueCount(data.datasets, data.days);
+  let xAxisLabels = formatDays(data.days);
 
+  let lastDay = getLastDayWithData(data.days);
+  let lastDayIndex = _.indexOf(data.days, lastDay);
+
+  let chartCanvas = document.getElementById('chart').getContext('2d');
+  let chart = new Chart(chartCanvas, {
+    type: 'line',
+    data: {
+      labels: xAxisLabels,
+      datasets: data.datasets
+    },
+    options: {
+      scales: {
+        yAxes: [{
+          stacked: false,
+          ticks: {
+            min: 0
+          }
+        }],
+      },
+      legend: {
+        reverse: true
+      },
+      elements: {
+        line: {
+          tension: 0
+        }
+      },
+      drawLine: {
+        begin: { x: xAxisLabels[0], y: 0 },
+        end: { x: xAxisLabels[xAxisLabels.length - 1], y: targetIssueCount },
+        style: "rgba(0, 0, 0, 1)"
+      },
+      drawBox: {
+        begin: { x: xAxisLabels[lastDayIndex], y: 0 },
+        end: { x: xAxisLabels[lastDayIndex + 2], y: targetIssueCount },
+        style: "rgba(0, 0, 0, 1)"
+      }
+    }
+  });
+
+  displayChart();
+};
+
+let getDataAndBuildChart = function (settings) {
   let states = _.map(settings.states, x => x.state);
   let colors = _.map(settings.states, x => x.color);
 
   let days = getDays(settings.startDate, settings.endDate, settings.nonWorkingDays || []);
   let lastDay = getLastDayWithData(days);
-  let lastDayIndex = _.indexOf(days, lastDay);
 
   displayLoading(days.length);
 
-  retrieveStateDataSets(settings.jiraUrl, settings.jiraQuery, states, colors, days, lastDay).then(function (datasets) {
-    let targetIssueCount = getTargetIssueCount(datasets, days);
-    let xAxisLabels = formatDays(days);
-
-    let chartCanvas = document.getElementById('chart').getContext('2d');
-    let chart = new Chart(chartCanvas, {
-      type: 'line',
-      data: {
-        labels: xAxisLabels,
-        datasets: datasets
-      },
-      options: {
-        scales: {
-          yAxes: [{
-            stacked: false,
-            ticks: {
-              min: 0
-            }
-          }],
-        },
-        legend: {
-          reverse: true
-        },
-        elements: {
-          line: {
-            tension: 0
-          }
-        },
-        drawLine: {
-          begin: { x: xAxisLabels[0], y: 0 },
-          end: { x: xAxisLabels[xAxisLabels.length - 1], y: targetIssueCount },
-          style: "rgba(0, 0, 0, 1)"
-        },
-        drawBox: {
-          begin: { x: xAxisLabels[lastDayIndex], y: 0 },
-          end: { x: xAxisLabels[lastDayIndex + 2], y: targetIssueCount },
-          style: "rgba(0, 0, 0, 1)"
-        }
-      }
+  if (settings.jiraFilter !== undefined) {
+    getFilterFromJira(settings.jiraUrl, settings.jiraFilter).then(function (jql) {
+      retrieveStateDataSets(settings.jiraUrl, jql, states, colors, days, lastDay).then(buildAndDisplayChart);
     });
-
-    displayChart();
-  });
+  } else {
+    retrieveStateDataSets(settings.jiraUrl, settings.jiraQuery, states, colors, days, lastDay).then(buildAndDisplayChart);
+  }
 };
 
 if (hasQueryParameters()) {
-  buildChart();
+  let settings = parseQueryParameters();
+  console.log(settings);
+  getDataAndBuildChart(settings);
 } else {
   $('#settingsTextArea').val(JSON.stringify(
     {
       jiraUrl: "https://jira-cfd.atlassian.net/",
       jiraQuery: "project = CFDTES",
-      startDate: '2017-01-02', 
-      endDate: '2017-01-28', 
+      startDate: '2017-01-02',
+      endDate: '2017-01-28',
       nonWorkingDays: ['2017-01-23'],
       states: [
-        {state: 'Done', color: 'rgba(153,255,51,1)'},
-        {state: 'In Progress', color: 'rgba(255,153,0,1)'},
-        {state: 'To Do', color: 'rgba(0,153,0,1)'}
-  ]}, null, 2));
+        { state: 'Done', color: 'rgba(153,255,51,1)' },
+        { state: 'In Progress', color: 'rgba(255,153,0,1)' },
+        { state: 'To Do', color: 'rgba(0,153,0,1)' }
+      ]
+    }, null, 2));
 
   displayQueryBuilder();
 }

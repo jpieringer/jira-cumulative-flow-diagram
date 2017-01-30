@@ -10,6 +10,7 @@ Download the extension via the [Chrome Webstore](https://chrome.google.com/webst
 {
   "jiraUrl": "https://jira-cfd.atlassian.net/",
   "jiraQuery": "project = CFDTES",
+  "jiraFilter": 12345,
   "startDate": "2017-01-02",
   "endDate": "2017-01-28",
   "nonWorkingDays": [
@@ -40,7 +41,8 @@ Download the extension via the [Chrome Webstore](https://chrome.google.com/webst
 | Option | Description |
 | --- | --- |
 | jiraUrl | The URL of Jira. It will be used to access Jira's REST API. |
-| jiraQuery | The Jira query the diagram should be based on. |
+| jiraQuery | The Jira query the diagram should be based on. The jiraQuery or the jiraFilter should be specified. |
+| jiraFilter | The id of the Jira filter the diagram should be based on. The jiraQuery or the jiraFilter should be specified. |
 | startDate | The first day included in the diagram. |
 | endDate | The last day included in the diagram. |
 | nonWorkingDays | A list of days that should be excluded. Weekends are excluded by default. |
