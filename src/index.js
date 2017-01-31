@@ -213,6 +213,12 @@ let getLastDayWithData = function (days) {
   return days[targetDayIndex];
 };
 
+let getTodayIndexIfInData = function (days) {
+  let today = dateToString(moment().millisecond(0).second(0).minute(0).hour(0));
+
+  return _.indexOf(days, today);
+};
+
 let getTargetIssueCount = function (datasets, days) {
   let targetIssueCount = 0;
 
@@ -257,6 +263,8 @@ let buildAndDisplayChart = function (data) {
   let lastDay = getLastDayWithData(data.days);
   let lastDayIndex = _.indexOf(data.days, lastDay);
 
+  let todayIndex = getTodayIndexIfInData(data.days)
+
   let chartCanvas = document.getElementById('chart').getContext('2d');
   let chart = new Chart(chartCanvas, {
     type: 'line',
@@ -286,11 +294,17 @@ let buildAndDisplayChart = function (data) {
         end: { x: xAxisLabels[xAxisLabels.length - 1], y: targetIssueCount },
         style: "rgba(0, 0, 0, 1)"
       },
-      drawBox: {
-        begin: { x: xAxisLabels[lastDayIndex], y: 0 },
-        end: { x: xAxisLabels[lastDayIndex + 2], y: targetIssueCount },
-        style: "rgba(0, 0, 0, 1)"
-      }
+      drawBox: [
+        {
+          begin: { x: xAxisLabels[lastDayIndex], y: 0 },
+          end: { x: xAxisLabels[lastDayIndex + 1], y: targetIssueCount },
+          style: "rgba(255, 255, 255, 1)"
+        },
+        {
+          begin: { x: xAxisLabels[todayIndex - 1], y: 0 },
+          end: { x: xAxisLabels[todayIndex], y: targetIssueCount },
+          style: "rgba(255, 255, 255, 0.6)"
+        }]
     }
   });
 

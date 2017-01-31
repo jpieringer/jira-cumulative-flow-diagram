@@ -7,24 +7,26 @@ let drawBoxPlugin = {
     let ctx = chartInstance.chart.ctx;
 
     if (chartInstance.options.drawBox) {
-      let box = chartInstance.options.drawBox;
+      for (let i = 0; i < chartInstance.options.drawBox.length; ++i) {
+        let box = chartInstance.options.drawBox[i];
 
-      let beginPixel = {
-        x: xScale.getPixelForValue(box.begin.x)+2,
-        y: yScale.getPixelForValue(box.begin.y)-1
-      };
-      let endPixel = {
-        x: xScale.getPixelForValue(box.end.x)-2,
-        y: yScale.getPixelForValue(box.end.y)+2
-      };
+        let beginPixel = {
+          x: xScale.getPixelForValue(box.begin.x) + 2,
+          y: yScale.getPixelForValue(box.begin.y)
+        };
+        let endPixel = {
+          x: xScale.getPixelForValue(box.end.x) + 2,
+          y: yScale.getPixelForValue(box.end.y) - 3
+        };
 
-      let width = endPixel.x - beginPixel.x;
-      let high = endPixel.y - beginPixel.y;
+        let width = endPixel.x - beginPixel.x;
+        let high = endPixel.y - beginPixel.y;
 
-      ctx.lineWidth = 0;
-      ctx.fillStyle = "white";
-      ctx.fillRect(beginPixel.x,beginPixel.y,width,high);
-      ctx.stroke();
+        ctx.lineWidth = 0;
+        ctx.fillStyle = box.style;
+        ctx.fillRect(beginPixel.x, beginPixel.y, width, high);
+        ctx.stroke();
+      }
     }
   }
 };
