@@ -185,6 +185,26 @@ let getSprintFromJira = function (jiraUrl, jiraSprint) {
   return promise;
 };
 
+let getBoardFromJira = function (jiraUrl, jiraBoard) {
+  let promise = new Promise(function (resolve, reject) {
+    $.ajax({
+      "url": jiraUrl + "/rest/agile/1.0/board/" + jiraBoard + "/sprint?state=active",
+      "method": "GET",
+      "headers": {
+        "Content-Type": "application/json",
+      }
+    }).then(function success(data, message, xhr) {
+      console.log("Received board: " + data);
+      resolve(data);
+    }, function error() {
+      displayError("Could not access Jira. Are you logged on?");
+      reject();
+    });
+  });
+
+  return promise;
+};
+
 /**
  * Today or begin/end if it is smaller/larger
  */
@@ -318,12 +338,32 @@ let getDataAndBuildChart = function (settings) {
   let startDate = settings.startDate;
   let endDate = settings.endDate;
   let nonWorkingDays = settings.nonWorkingDays || [];
+  let sprint = settings.jiraSprint;
   let jql = settings.jiraQuery;
+
+  let processBoard = function () {
+    return new Promise(function (resolve, reject) {
+      if (typeof settings.jiraBoard !== "undefined") {
+        getBoardFromJira(settings.jiraUrl, settings.jiraBoard).then(function (data) {
+          if (data.values.length !== 1) {
+            console.log(data);
+            displayError(data.values.length + " sprints were found. Only one sprint is allowed.");
+            reject();
+          } else {
+            sprint = data.values[0].id;
+            resolve();
+          }
+        });
+      } else {
+        resolve();
+      }
+    })
+  };
 
   let processSprint = function () {
     return new Promise(function (resolve, reject) {
-      if (typeof settings.jiraSprint !== "undefined") {
-        getSprintFromJira(settings.jiraUrl, settings.jiraSprint).then(function (data) {
+      if (typeof sprint !== "undefined") {
+        getSprintFromJira(settings.jiraUrl, sprint).then(function (data) {
           startDate = startDate || dateToString(moment(data.startDate));
           endDate = endDate || dateToString(moment(data.endDate));
           jql = jql || "sprint = " + data.id;
@@ -350,6 +390,8 @@ let getDataAndBuildChart = function (settings) {
 
   processFilter()
     .then(function () {
+      return processBoard();
+    }).then(function () {
       return processSprint();
     }).then(function () {
       let days = getDays(startDate, endDate, nonWorkingDays);

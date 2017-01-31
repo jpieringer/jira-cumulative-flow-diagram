@@ -41,6 +41,7 @@ Download the extension via the [Chrome Webstore](https://chrome.google.com/webst
 | Option | Description |
 | --- | --- |
 | jiraUrl | The URL of Jira. It will be used to access Jira's REST API. |
+| jiraBoard | The id of a Jira board with one active sprint on which the diagram should be based on. The query, start date and end date are used. The query, start- and enddate get overwritten by the specific options described below. |
 | jiraSprint | The id of the Jira sprint the diagram should be based on. The query, start date and end date are used. The query, start- and enddate get overwritten by the specific options described below. |
 | jiraQuery | The Jira query the diagram should be based on. The jiraQuery or the jiraFilter should be specified. |
 | jiraFilter | The id of the Jira filter the diagram should be based on. The jiraQuery or the jiraFilter should be specified. |
