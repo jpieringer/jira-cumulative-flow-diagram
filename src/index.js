@@ -253,7 +253,7 @@ let getTargetIssueCount = function (datasets, days) {
 };
 
 let createDeepLink = function (settings) {
-  let baseUrl = "chrome-extension://magcjdplddfbdcgkjmmkcjhkppaiijen/index.html";
+  let baseUrl = "chrome-extension://dbjnljpnlpkaemdjgkblcokahlnglkja/index.html";
   return baseUrl + "?" + qs.stringify(settings);
 };
 
