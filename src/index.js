@@ -45,7 +45,7 @@ let displayError = function (errorMessage) {
 };
 
 let dateToString = function (date) {
-  return date.format('YYYY-MM-DD');
+  return moment(date).format('YYYY-MM-DD');
 };
 
 let getDays = function (startDate, endDate, nonWorkingDays) {
@@ -66,25 +66,17 @@ let formatDays = function (days) {
   return _.map(days, day => moment(day).format('dd D.M'));
 };
 
-let createJiraQuery = function (projectQuery, date, targetState, states) {
-  let reversedStates = _.reverse(states.slice());
-  let targetStateIndex = _.indexOf(reversedStates, targetState);
-  let includedStates = _.slice(reversedStates, targetStateIndex);
-
-  let stateQuery = "status was in ('" + _.join(includedStates, "', '") + "') during (" + date + ", " + date + ")";
-
-  projectQuery = _.trim(projectQuery);
-
-  if (projectQuery.length === 0) {
-    return stateQuery;
+let getStateIndex =   function (states, state) {
+  for (let stateIndex = 0; stateIndex < states.length; ++stateIndex) {
+    if (states[stateIndex] === state) {
+      return stateIndex;
+    }
   }
 
-  return projectQuery + " and " + stateQuery;
-};
+  displayError("State " + state + " not found");
+}
 
-let executeSingleJiraQuery = function (jiraUrl, jiraQueryTemplate, date, state, states, queryCount) {
-  let jiraQuery = createJiraQuery(jiraQueryTemplate, date, state, states);
-
+let getJiraIssues = function (jiraUrl, jiraQuery, startAt) {
   let promise = new Promise(function (resolve, reject) {
     $.ajax({
       "url": jiraUrl + "rest/api/2/search",
@@ -93,12 +85,30 @@ let executeSingleJiraQuery = function (jiraUrl, jiraQueryTemplate, date, state, 
         "Content-Type": "application/json",
       },
       "data": {
-        jql: jiraQuery
+        jql: jiraQuery,
+        expand: 'changelog',
+        fields: 'created,status',
+        startAt: startAt
       }
     }).then(function success(data, message, xhr) {
-      console.log("Received query for " + state + " on " + date + " with " + data.total + " (" + jiraQuery + ")");
-      trackProgress(100 / queryCount);
-      resolve({ date: date, state: state, count: data.total });
+      console.log("Received issues: ");
+      console.log(data);
+
+      if (data.total > data.maxResults + startAt) {
+        console.log("To many issues found, continue with query: total: " + data.total + ", maxResult: " + data.maxResults + ", startAt: " + startAt);
+        getJiraIssues(jiraUrl, jiraQuery, startAt + data.maxResults)
+        .then(function success(innerData) {
+          data.maxResults += innerData.maxResults;
+          data.issues = _.concat(data.issues, innerData.issues);
+          resolve(data);
+        }, function error() {
+          displayError("Could not access Jira. Are you logged on?");
+          reject();
+        });
+      } else {
+        trackProgress(100);
+        resolve(data);
+      }
     }, function error() {
       displayError("Could not access Jira. Are you logged on?");
       reject();
@@ -111,31 +121,96 @@ let executeSingleJiraQuery = function (jiraUrl, jiraQueryTemplate, date, state, 
 let retrieveStateDataSets = function (jiraUrl, jiraQuery, states, colors, days, lastDay) {
   let promise = new Promise(function (resolve, reject) {
 
-    let queryPromisses = [];
-    for (let dayIndex = 0; dayIndex <= _.indexOf(days, lastDay); dayIndex++) {
-      let day = days[dayIndex];
+    getJiraIssues(jiraUrl, jiraQuery, 0).then(function (data) {
 
-      for (let stateIndex = 0; stateIndex < states.length; ++stateIndex) {
-        let state = states[stateIndex];
-        queryPromisses.push(executeSingleJiraQuery(jiraUrl, jiraQuery, day, state, states, states.length * days.length));
+      let processedIssues = [];
+       for (let issueIndex = 0; issueIndex < data.issues.length; ++issueIndex) {
+        let rawIssue = data.issues[issueIndex];
+
+        if (rawIssue.changelog.total > rawIssue.changelog.maxResults) {
+          console.log("To many history entries found for: " + rawIssue.key + " total: " + rawIssue.changelog.total + ", maxResult: " + rawIssue.changelog.maxResults);
+        }
+
+        let processedIssue = {
+          key: rawIssue.key,
+          changelog:
+          [{
+            state: _.last(states),
+            created: rawIssue.fields.created
+          }]
+        };
+
+        for (let changelogEntryIndex = 0; changelogEntryIndex < rawIssue.changelog.histories.length; changelogEntryIndex++) {
+          let rawChangelogEntry = rawIssue.changelog.histories[changelogEntryIndex];
+
+          for (let itemIndex = 0; itemIndex < rawChangelogEntry.items.length; ++itemIndex) {
+            if (rawChangelogEntry.items[itemIndex].field === "status") {
+              processedIssue.changelog.push({
+                state: rawChangelogEntry.items[itemIndex].toString,
+                created: rawChangelogEntry.created
+              });
+            }
+          }
+        }
+
+        processedIssues.push(processedIssue);
       }
-    }
 
-    Promise.all(queryPromisses).then(function (responses) {
-      console.log("Jira REST API calles finished.");
+      // Replace multiple transitions per day with the last one
+      for (let issueIndex = 0; issueIndex < processedIssues.length; ++issueIndex) {
+        let issue = processedIssues[issueIndex];
 
+        let transitionPerDay = [_.last(issue.changelog)];
+
+        for (let changelogEntryIndex = issue.changelog.length - 1; changelogEntryIndex >= 0; changelogEntryIndex--) {
+          if (!moment(_.last(transitionPerDay).created).isSame(issue.changelog[changelogEntryIndex].created, 'day')) {
+            transitionPerDay = _.concat(issue.changelog[changelogEntryIndex], transitionPerDay);
+          }
+        }
+
+        issue.changelog = transitionPerDay;
+      }
+
+      // Create dataset
       let datasets = [];
       for (let stateIndex = 0; stateIndex < states.length; ++stateIndex) {
-        let sortedResponses = _.sortBy(_.filter(responses, x => x.state === states[stateIndex]), x => _.indexOf(days, x.date));
-
-        let filledData = _.map(sortedResponses, x => x.count);
-        let paddingData = _.fill(Array(days.length - filledData.length), 0);
-
         datasets[stateIndex] = {
           label: states[stateIndex],
           backgroundColor: colors[stateIndex],
-          data: _.concat(filledData, paddingData)
+          data: _.fill(Array(days.length), 0)
         };
+      }
+
+      // Transfer transitions to dataset
+      for (let issueIndex = 0; issueIndex < processedIssues.length; ++issueIndex) {
+        let issue = processedIssues[issueIndex];
+
+        let changelogIndex = 0;
+        for (let dayIndex = 0; dayIndex < days.length; ++dayIndex) {
+          let day = days[dayIndex];
+          let changelogEntry = issue.changelog[changelogIndex];
+
+          if (moment(day).isBefore(changelogEntry.created, 'day')) {
+            // Before created -> do nothing
+          } else if (moment(day).isSame(changelogEntry.created, 'day')) {
+            // Same as created -> increase
+            let stateIndex = getStateIndex(states, changelogEntry.state);
+            datasets[stateIndex].data[dayIndex] = datasets[stateIndex].data[dayIndex] + 1;
+          } else {
+            // After created -> incrase or move on
+            let nextChangelogIndex = changelogIndex + 1;
+           while (nextChangelogIndex < issue.changelog.length && moment(issue.changelog[nextChangelogIndex].created).isSameOrBefore(day, 'day')) {
+              console.debug(nextChangelogIndex);
+              changelogIndex = nextChangelogIndex;
+              nextChangelogIndex = changelogIndex + 1;
+            }
+
+            changelogEntry = issue.changelog[changelogIndex];
+            let stateIndex = getStateIndex(states, changelogEntry.state);
+            datasets[stateIndex].data[dayIndex] = datasets[stateIndex].data[dayIndex] + 1;
+
+          }
+        }
       }
 
       resolve({ datasets: datasets, days: days });
@@ -246,7 +321,7 @@ let getTargetIssueCount = function (datasets, days) {
   let targetDayIndex = _.indexOf(days, targetDay);
 
   for (let datasetIndex = 0; datasetIndex < datasets.length; ++datasetIndex) {
-    targetIssueCount = _.max([targetIssueCount, datasets[datasetIndex].data[targetDayIndex]]);
+    targetIssueCount += datasets[datasetIndex].data[targetDayIndex];
   }
 
   return targetIssueCount;
@@ -295,7 +370,7 @@ let buildAndDisplayChart = function (data) {
     options: {
       scales: {
         yAxes: [{
-          stacked: false,
+          stacked: true,
           ticks: {
             min: 0
           }
