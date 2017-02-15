@@ -190,7 +190,7 @@ let retrieveStateDataSets = function (jiraUrl, jiraQuery, states, colors, days, 
           let day = days[dayIndex];
           let changelogEntry = issue.changelog[changelogIndex];
 
-          if (moment(day).isBefore(changelogEntry.created, 'day')) {
+          if (moment(day).isBefore(changelogEntry.created, 'day') || moment(day).isAfter(moment(), 'day')) {
             // Before created -> do nothing
           } else if (moment(day).isSame(changelogEntry.created, 'day')) {
             // Same as created -> increase
