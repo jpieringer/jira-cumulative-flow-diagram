@@ -53,7 +53,7 @@ let getDays = function (startDate, endDate, nonWorkingDays) {
 
   let currentDate = moment(startDate);
   while (currentDate.isSameOrBefore(endDate)) {
-    if (currentDate.day() >= 1 && currentDate.day() <= 5 && (nonWorkingDays.length === 0 || !_.every(nonWorkingDays, ignoreDate => moment(ignoreDate).isSame(currentDate)))) {
+    if (currentDate.day() >= 1 && currentDate.day() <= 5 && (nonWorkingDays.length === 0 || _.every(nonWorkingDays, ignoreDate => !moment(ignoreDate).isSame(currentDate)))) {
       days.push(dateToString(currentDate));
     }
     currentDate.add(1, 'days');
