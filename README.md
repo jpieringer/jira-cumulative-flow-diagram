@@ -1,20 +1,20 @@
 # Installation
-Download the extension via the [Chrome Webstore](https://chrome.google.com/webstore/detail/jira-cumulative-flow-diag/dbjnljpnlpkaemdjgkblcokahlnglkja?hl=de).
+Download the extension via the [Chrome Webstore](https://chrome.google.com/webstore/detail/jira-cumulative-flow-diag/dbjnljpnlpkaemdjgkblcokahlnglkja?hl=de) or [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/cumulative-flow-diagram/).
 
 # Usage
 ## Create a diagram
-1. Login to Jira in Chrome
-2. Click on the icon ![icon](src/icon16.png) that was installed in your Chrome URL bar.
+1. Login to Jira
+2. Click on the icon ![icon](src/icon16.png) that was installed in your URL bar.
 3. Enter your desired configuration in the JSON notation. See the Options section below for further details about the configuration options. The configuration might look like the following:
 ```json
 {
   "jiraUrl": "https://jira-cfd.atlassian.net/",
   "jiraQuery": "project = CFDTES",
   "jiraFilter": 12345,
-  "startDate": "2017-01-02",
-  "endDate": "2017-01-28",
+  "startDate": "2020-04-02",
+  "endDate": "2020-04-28",
   "nonWorkingDays": [
-    "2017-01-23"
+    "2020-04-13"
   ],
   "states": [
     {
