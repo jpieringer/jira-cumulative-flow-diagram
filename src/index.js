@@ -1,4 +1,4 @@
-import 'jquery';
+import $ from 'jquery';
 import Chart from 'chart.js';
 import 'bootstrap/dist/css/bootstrap.css';
 import moment from 'moment';
@@ -200,7 +200,6 @@ let retrieveStateDataSets = function (jiraUrl, jiraQuery, states, colors, days, 
             // After created -> incrase or move on
             let nextChangelogIndex = changelogIndex + 1;
            while (nextChangelogIndex < issue.changelog.length && moment(issue.changelog[nextChangelogIndex].created).isSameOrBefore(day, 'day')) {
-              console.debug(nextChangelogIndex);
               changelogIndex = nextChangelogIndex;
               nextChangelogIndex = changelogIndex + 1;
             }
@@ -328,7 +327,7 @@ let getTargetIssueCount = function (datasets, days) {
 };
 
 let createDeepLink = function (settings) {
-  let baseUrl = "chrome-extension://dbjnljpnlpkaemdjgkblcokahlnglkja/index.html";
+  let baseUrl = window.location.origin + window.location.pathname;
   return baseUrl + "?" + qs.stringify(settings);
 };
 

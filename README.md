@@ -55,9 +55,10 @@ Download the extension via the [Chrome Webstore](https://chrome.google.com/webst
 # Development
 1. Clone Repo
 2. Install Node.js
-3. Run: npm Install
-4. Run: npm run build
-5. Install Extension created in the public folder in Chrome
+3. Run: npm install
+4. To create a development build execute: npm run build
+5. To create a production build exeucte: npm run build-production
+6. Install addon/addon.zip in Chrome/Firefox
 
 # Credits
 Icon made by [Maxim Basinski](http://www.flaticon.com/authors/maxim-basinski) from [Flaticon](http://www.flaticon.com).

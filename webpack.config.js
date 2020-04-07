@@ -1,45 +1,42 @@
-var webpack = require('webpack');
-var CopyWebpackPlugin = require('copy-webpack-plugin');
+const CopyWebpackPlugin = require('copy-webpack-plugin');
+const path = require('path');
+const ZipPlugin = require('zip-webpack-plugin');
 
 module.exports = {
   entry: './src/index.js',
   output: {
     filename: 'bundle.js',
-    path: './public'
+    path: path.resolve(__dirname, 'addon')
   },
   resolve: {
-    extensions: ['', '.js', '.jsx', '.json']
+    extensions: ['.js', '.json']
   },
   module: {
-    loaders: [
+    rules: [
       {
-        test: /\.(js|jsx)$/,
+        test: /\.js$/,
         exclude: /node_modules/,
-        loader: 'babel-loader'
+        use: 'babel-loader'
       },
       {
         test: /\.css$/,
-        loaders: ['style-loader', 'css-loader']
+        use: ['style-loader', 'css-loader']
       },
       {
         test: /\.woff2?(\?v=[0-9]\.[0-9]\.[0-9])?$/,
-        loader: 'url-loader?limit=10000',
+        use: 'url-loader?limit=10000',
       },
       {
         test: /\.(ttf|eot|svg)(\?[\s\S]+)?$/,
-        loader: 'file-loader',
+        use: 'file-loader',
       },
       {
         test: /bootstrap-sass\/assets\/javascripts\//,
-        loader: 'imports-loader?jQuery=jquery'
+        use: 'imports-loader?jQuery=jquery'
       },
     ]
   },
   plugins: [
-    new webpack.ProvidePlugin({
-      $: "jquery",
-      jQuery: "jquery"
-    }),
     new CopyWebpackPlugin([
       { from: 'src/manifest.json' },
       { from: 'src/index.html' },
@@ -49,7 +46,10 @@ module.exports = {
       { from: 'src/icon64.png' },
       { from: 'src/icon128.png' },
       { from: 'src/icon512.png' },
-    ])
+    ]),
+    new ZipPlugin({
+      filename: 'addon.zip',
+    })
   ]
 }
 
