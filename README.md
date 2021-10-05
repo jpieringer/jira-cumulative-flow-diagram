@@ -54,7 +54,7 @@ Download the extension via the [Chrome Webstore](https://chrome.google.com/webst
 
 # Development
 1. Clone Repo
-2. Install Node.js
+2. Install Node.js (Tested with Node.js v16.10.0 and npm 7.24.0) 
 3. Run: npm install
 4. To create a development build execute: npm run build
 5. To create a production build exeucte: npm run build-production
