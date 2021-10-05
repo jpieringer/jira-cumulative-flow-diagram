@@ -1,10 +1,11 @@
-import Chart from 'chart.js';
+import { Chart } from 'chart.js';
 
 let drawLinePlugin = {
+  id: 'drawLinePlugin',
   afterDraw: function (chartInstance) {
-    let xScale = chartInstance.scales["x-axis-0"];
-    let yScale = chartInstance.scales["y-axis-0"];
-    let ctx = chartInstance.chart.ctx;
+    let xScale = chartInstance.scales.x;
+    let yScale = chartInstance.scales.y;
+    let ctx = chartInstance.ctx;
 
     if (chartInstance.options.drawLine) {
       let line = chartInstance.options.drawLine;
@@ -19,4 +20,4 @@ let drawLinePlugin = {
   }
 };
 
-Chart.pluginService.register(drawLinePlugin);
+Chart.register(drawLinePlugin);

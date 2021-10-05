@@ -1,10 +1,11 @@
-import Chart from 'chart.js';
+import { Chart } from 'chart.js';
 
 let drawBoxPlugin = {
+  id: 'drawBoxPlugin',
   afterDraw: function (chartInstance) {
-    let xScale = chartInstance.scales["x-axis-0"];
-    let yScale = chartInstance.scales["y-axis-0"];
-    let ctx = chartInstance.chart.ctx;
+    let xScale = chartInstance.scales.x;
+    let yScale = chartInstance.scales.y;
+    let ctx = chartInstance.ctx;
 
     if (chartInstance.options.drawBox) {
       for (let i = 0; i < chartInstance.options.drawBox.length; ++i) {
@@ -31,4 +32,4 @@ let drawBoxPlugin = {
   }
 };
 
-Chart.pluginService.register(drawBoxPlugin);
+Chart.register(drawBoxPlugin);

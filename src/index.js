@@ -1,12 +1,13 @@
-import $ from 'jquery';
-import Chart from 'chart.js';
 import 'bootstrap/dist/css/bootstrap.css';
-import moment from 'moment';
+import { CategoryScale, Chart, Filler, Legend, LinearScale, LineController, LineElement, PointElement, Tooltip } from 'chart.js';
+import $ from 'jquery';
 import _ from 'lodash';
+import moment from 'moment';
 import qs from 'qs';
-
-import './chart-js-draw-line-plugin.js';
 import './chart-js-draw-box-plugin.js';
+import './chart-js-draw-line-plugin.js';
+
+Chart.register(LineElement, PointElement, LineController, CategoryScale, LinearScale, Filler, Legend, Tooltip);
 
 let displayChart = function () {
   $("#query-builder-div").hide();
@@ -66,7 +67,7 @@ let formatDays = function (days) {
   return _.map(days, day => moment(day).format('dd D.M'));
 };
 
-let getStateIndex =   function (states, state) {
+let getStateIndex = function (states, state) {
   for (let stateIndex = 0; stateIndex < states.length; ++stateIndex) {
     if (states[stateIndex] === state) {
       return stateIndex;
@@ -97,14 +98,14 @@ let getJiraIssues = function (jiraUrl, jiraQuery, startAt) {
       if (data.total > data.maxResults + startAt) {
         console.log("To many issues found, continue with query: total: " + data.total + ", maxResult: " + data.maxResults + ", startAt: " + startAt);
         getJiraIssues(jiraUrl, jiraQuery, startAt + data.maxResults)
-        .then(function success(innerData) {
-          data.maxResults += innerData.maxResults;
-          data.issues = _.concat(data.issues, innerData.issues);
-          resolve(data);
-        }, function error() {
-          displayError("Could not access Jira. Are you logged on?");
-          reject();
-        });
+          .then(function success(innerData) {
+            data.maxResults += innerData.maxResults;
+            data.issues = _.concat(data.issues, innerData.issues);
+            resolve(data);
+          }, function error() {
+            displayError("Could not access Jira. Are you logged on?");
+            reject();
+          });
       } else {
         trackProgress(100);
         resolve(data);
@@ -124,7 +125,7 @@ let retrieveStateDataSets = function (jiraUrl, jiraQuery, states, colors, days, 
     getJiraIssues(jiraUrl, jiraQuery, 0).then(function (data) {
 
       let processedIssues = [];
-       for (let issueIndex = 0; issueIndex < data.issues.length; ++issueIndex) {
+      for (let issueIndex = 0; issueIndex < data.issues.length; ++issueIndex) {
         let rawIssue = data.issues[issueIndex];
 
         if (rawIssue.changelog.total > rawIssue.changelog.maxResults) {
@@ -134,10 +135,10 @@ let retrieveStateDataSets = function (jiraUrl, jiraQuery, states, colors, days, 
         let processedIssue = {
           key: rawIssue.key,
           changelog:
-          [{
-            state: _.last(states),
-            created: rawIssue.fields.created
-          }]
+            [{
+              state: _.last(states),
+              created: rawIssue.fields.created
+            }]
         };
 
         for (let changelogEntryIndex = 0; changelogEntryIndex < rawIssue.changelog.histories.length; changelogEntryIndex++) {
@@ -176,8 +177,10 @@ let retrieveStateDataSets = function (jiraUrl, jiraQuery, states, colors, days, 
       for (let stateIndex = 0; stateIndex < states.length; ++stateIndex) {
         datasets[stateIndex] = {
           label: states[stateIndex],
+          borderColor: colors[stateIndex],
           backgroundColor: colors[stateIndex],
-          data: _.fill(Array(days.length), 0)
+          data: _.fill(Array(days.length), 0),
+          fill: true
         };
       }
 
@@ -199,7 +202,7 @@ let retrieveStateDataSets = function (jiraUrl, jiraQuery, states, colors, days, 
           } else {
             // After created -> incrase or move on
             let nextChangelogIndex = changelogIndex + 1;
-           while (nextChangelogIndex < issue.changelog.length && moment(issue.changelog[nextChangelogIndex].created).isSameOrBefore(day, 'day')) {
+            while (nextChangelogIndex < issue.changelog.length && moment(issue.changelog[nextChangelogIndex].created).isSameOrBefore(day, 'day')) {
               changelogIndex = nextChangelogIndex;
               nextChangelogIndex = changelogIndex + 1;
             }
@@ -367,20 +370,22 @@ let buildAndDisplayChart = function (data) {
       datasets: data.datasets
     },
     options: {
-      scales: {
-        yAxes: [{
-          stacked: true,
-          ticks: {
-            min: 0
-          }
-        }],
+      responsive: true,
+      plugins: {
+        legend: {
+          reverse: true,
+        }
       },
-      legend: {
-        reverse: true
+      scales: {
+        y: {
+          stacked: true,
+          min: 0,
+        },
       },
       elements: {
         line: {
-          tension: 0
+          tension: 0,
+          fill: true
         }
       },
       drawLine: {
