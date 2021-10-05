@@ -371,6 +371,7 @@ let buildAndDisplayChart = function (data) {
     },
     options: {
       responsive: true,
+      maintainAspectRatio: false,
       plugins: {
         legend: {
           reverse: true,
