@@ -58,7 +58,7 @@ Download the extension via the [Chrome Webstore](https://chrome.google.com/webst
 3. Run: npm install
 4. To create a development build execute: npm run build
 5. To create a production build exeucte: npm run build-production
-6. Install addon/addon.zip in Chrome/Firefox
+6. Install dist/chrome/chrome-addon.zip or dist/firefox/firefox-addon.zip in Chrome/Firefox
 
 # Credits
 Icon made by [Maxim Basinski](http://www.flaticon.com/authors/maxim-basinski) from [Flaticon](http://www.flaticon.com).
