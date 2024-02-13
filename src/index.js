@@ -154,6 +154,8 @@ let retrieveStateDataSets = function (jiraUrl, jiraQuery, states, colors, days, 
           }
         }
 
+        processedIssue.changelog = _.sortBy(processedIssue.changelog, ['created']);
+
         processedIssues.push(processedIssue);
       }
 
